@@ -1,0 +1,19 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.4.0
+    hooks:
+    -   id: check-added-large-files
+    -   id: check-toml
+    -   id: end-of-file-fixer
+    -   id: fix-byte-order-marker
+    -   id: mixed-line-ending
+        args: [--fix=lf]
+    -   id: trailing-whitespace
+-   repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+    -   id: fmt
+        args: [--all, --, --check]
+    -   id: cargo-check
+    -   id: clippy
+        args: [--, -D, warnings]

@@ -1,0 +1,86 @@
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+      - name: Run pre-commit
+        uses: pre-commit/action@v2.0.2
+        with:
+          extra_args: --all-files
+
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable, 1.34.2]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+        env:
+          RUSTFLAGS: -D warnings
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all
+        env:
+          RUSTFLAGS: -D warnings
+
+  coverage:
+    name: Test coverage
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2021-05-09 # Use fixed nightly which we know to be working
+          components: llvm-tools-preview
+          override: true
+      - name: Setup grcov
+        run: |
+          wget https://github.com/mozilla/grcov/releases/download/v0.8.0/grcov-linux-x86_64.tar.bz2 -qO- | tar -xjvf -
+          mv grcov ~/.cargo/bin
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all
+        env:
+          RUSTFLAGS: -Zinstrument-coverage -Clink-dead-code
+          LLVM_PROFILE_FILE: interp-rs-%p-%m.profraw
+      - name: Run grcov
+        run: grcov . -s . -b ./target/debug/ -t lcov --branch --llvm --ignore-not-existing -o ./lcov.info --ignore '/*'
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v1
+        with:
+          file: lcov.info
