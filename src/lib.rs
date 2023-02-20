@@ -167,7 +167,8 @@ where
 /// Linearly interpolate the data points given by the `x` and `y` slices at each of the points in
 /// the `xp` slice.
 ///
-/// Returns the equivalent y coordinates to each of the x coordinates given by `xp`.
+/// Returns a `Vec<T>` containing the equivalent y coordinates to each of the x coordinates given
+/// by `xp`.
 ///
 /// This is equivalent to running [`interp`] iteratively for each value in `xp`, but more efficient
 /// as intermediate calculations are not repeated.
@@ -222,6 +223,68 @@ where
                 m[i] * xp + c[i]
             })
             .collect()
+    }
+}
+
+/// Linearly interpolate the data points given by the `x` and `y` slices at each of the points in
+/// the `xp` slice. Please note this function requires the `interp_array` feature and Rust 1.55.0 or
+/// later.
+///
+/// Returns a `[T; N]` containing the equivalent y coordinates to each of the x coordinates given
+/// by `xp`.
+///
+/// This is equivalent to running [`interp`] iteratively for each value in `xp`, but more efficient
+/// as intermediate calculations are not repeated.
+///
+/// If the lengths of `x` and `y` differ, only the number of elements in the shorter slice are
+/// considered; excess elements are ignored.
+///
+/// If the length of either `x` or `y` is 0, 0 is returned for each `xp`. If the length of either
+/// is 1, `y[0]` is returned. If both are 2 elements or longer the interpolations are performed as
+/// expected.
+///
+/// # Example
+///
+/// ```
+/// use interp::interp_array;
+///
+/// let x = [0.0, 1.0, 2.0, 3.0];
+/// let y = [1.0, 3.0, 4.0, 2.0];
+///
+/// let xp = [0.5, 2.5, 4.0];
+///
+/// assert_eq!(interp_array(&x, &y, &xp), [2.0, 3.0, 0.0]);
+/// ```
+#[cfg(feature = "interp_array")]
+pub fn interp_array<T, const N: usize>(x: &[T], y: &[T], xp: &[T; N]) -> [T; N]
+where
+    T: Num + PartialOrd + Copy,
+{
+    // The min-length of the x and y vectors. We ignore additional entries in either vec.
+    let min_len = std::cmp::min(x.len(), y.len());
+
+    if min_len == 0 {
+        [T::zero(); N]
+    } else if min_len == 1 {
+        [y[0]; N]
+    } else {
+        // Difference between subsequent x and y coordinate values
+        let dx = deltas(&x[..min_len]);
+        let dy = deltas(&y[..min_len]);
+
+        // Slope between subsequent points
+        let m = slopes(&dx, &dy);
+
+        // Intercept of the line between adjacent points
+        let c = intercepts(x, y, &m);
+
+        xp.map(|xp| {
+            // The index of the x coordinate right before xp. Use min to ensure we don't go out
+            // of m's and c's bounds when xp > x.last()
+            let i = prev_index(x, xp).min(min_len - 2);
+
+            m[i] * xp + c[i]
+        })
     }
 }
 
@@ -314,5 +377,23 @@ mod tests {
         let result = vec![4.0, -2.0, 0.0];
 
         assert_eq!(interp_slice(&x, &y, &xp), result);
+    }
+
+    #[test]
+    #[cfg(feature = "interp_array")]
+    fn test_interp_array() {
+        assert_eq!(interp_array(&[], &[], &[2.0]), [0.0]);
+
+        assert_eq!(interp_array(&[1.0], &[2.0], &[2.0]), [2.0]);
+
+        let x = vec![0.0, 1.0, 2.0, 3.0, 4.5];
+        let y = vec![0.0, 2.0, 5.0, 3.0, 2.0];
+
+        assert_eq!(interp_array(&x, &y, &[]), []);
+
+        let xp = [2.5, -1.0, 7.5];
+        let result = [4.0, -2.0, 0.0];
+
+        assert_eq!(interp_array(&x, &y, &xp), result);
     }
 }

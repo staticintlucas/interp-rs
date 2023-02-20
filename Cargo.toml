@@ -13,3 +13,6 @@ edition = "2018"
 [dependencies]
 itertools = { version = "0.10", default-features = false }
 num = "0.4"
+
+[features]
+interp_array = []
