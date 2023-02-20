@@ -1,6 +1,6 @@
 # interp
 
-[![Test status](https://img.shields.io/github/workflow/status/staticintlucas/interp-rs/Test?label=tests&style=flat-square)][tests]
+[![Test status](https://img.shields.io/github/actions/workflow/status/staticintlucas/interp-rs/test.yml?branch=main&label=tests&style=flat-square)][tests]
 [![Code coverage](https://img.shields.io/codecov/c/gh/staticintlucas/interp-rs?style=flat-square)][coverage]
 [![Crate version](https://img.shields.io/crates/v/interp?style=flat-square)][version]
 [![Rust version](https://img.shields.io/badge/rust-1.34%2B-informational?style=flat-square)][rust version]
