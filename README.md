@@ -23,14 +23,14 @@ Add `interp` to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-interp = "0.1"
+interp = "1.0"
 ```
 
 Or, if you need the `interp_array` feature (only supported on Rust 1.55.0 or later)
 
 ```toml
 [dependencies]
-interp = { version = "0.1", features = ["interp_array"] }
+interp = { version = "1.0", features = ["interp_array"] }
 ```
 
 ## Example
