@@ -27,7 +27,38 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [stable, 1.34.2]
+        rust: [stable, 1.55.0]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features
+        env:
+          RUSTFLAGS: -D warnings
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all --all-features
+        env:
+          RUSTFLAGS: -D warnings
+
+  test-msrv: # separate test since MSRV doesn't support interp_array
+    name: Build & Test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [1.34.2]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
