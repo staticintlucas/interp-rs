@@ -3,7 +3,7 @@
 [![Test status](https://img.shields.io/github/actions/workflow/status/staticintlucas/interp-rs/test.yml?branch=main&label=tests&style=flat-square)][tests]
 [![Code coverage](https://img.shields.io/codecov/c/gh/staticintlucas/interp-rs?style=flat-square)][coverage]
 [![Crate version](https://img.shields.io/crates/v/interp?style=flat-square)][version]
-[![Rust version](https://img.shields.io/badge/rust-1.34%2B-informational?style=flat-square)][rust version]
+[![Rust version](https://img.shields.io/badge/rust-1.36%2B-informational?style=flat-square)][rust version]
 [![Downloads](https://img.shields.io/crates/d/interp?style=flat-square)][downloads]
 
 A Rust reimplementation of Matlab's `interp1` function for linear interpolation.
