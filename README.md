@@ -26,6 +26,13 @@ Add `interp` to your `Cargo.toml` file:
 interp = "0.1"
 ```
 
+Or, if you need the `interp_array` feature (only supported on Rust 1.55.0 or later)
+
+```toml
+[dependencies]
+interp = { version = "0.1", features = ["interp_array"] }
+```
+
 ## Example
 
 ```rust
@@ -34,7 +41,16 @@ use interp::interp;
 let x = vec![0.0, 0.2, 0.5, 0.8, 1.0];
 let y = vec![0.0, 1.0, 3.0, 3.5, 4.0];
 
+// Interpolate at a single point
 assert_eq!(interp(&x, &y, 0.35), 2.0);
+
+// Interpolate a vec
+let xp = vec![0.1, 0.65, 0.9];
+assert_eq!(interp_slice(&x, &y, &xp), vec![0.5, 3.25, 3.75]);
+
+// Interpolate an array (requires the interp_array feature and Rust 1.55.0+)
+let xp = [0.1, 0.65, 0.9];
+assert_eq!(interp_array(&x, &y, &xp), [0.5, 3.25, 3.75]);
 ```
 
 Full API documentation is available on [docs.rs][docs].
