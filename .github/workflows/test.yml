@@ -41,7 +41,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --all-features
+          args: --all-features
         env:
           RUSTFLAGS: -D warnings
       - name: Run cargo test
@@ -72,7 +72,6 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release
         env:
           RUSTFLAGS: -D warnings
       - name: Run cargo test
