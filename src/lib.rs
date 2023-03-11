@@ -16,7 +16,7 @@
 #![warn(clippy::all, clippy::pedantic, clippy::cargo)]
 #![allow(clippy::many_single_char_names)]
 
-use num::Num;
+use num_traits::Num;
 
 use itertools::{izip, Itertools};
 
