@@ -10,16 +10,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
-          profile: minimal
           toolchain: stable
-          override: true
           components: rustfmt, clippy
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.0
         with:
           extra_args: --all-files
+        env:
+          SKIP: cargo-test
 
   test:
     name: Build & Test
@@ -32,23 +32,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
       - name: Run cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --all-features
+        run: cargo build --all-features
         env:
           RUSTFLAGS: -D warnings
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --all-features
+        run: cargo test --all-features
         env:
           RUSTFLAGS: -D warnings
 
@@ -63,22 +55,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
       - name: Run cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
+        run: cargo build
         env:
           RUSTFLAGS: -D warnings
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all
+        run: cargo test
         env:
           RUSTFLAGS: -D warnings
 
@@ -90,22 +75,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
-          profile: minimal
           toolchain: stable
-          override: true
           components: llvm-tools
       - name: Setup grcov
-        uses: actions-rs/install@v0.1
-        with:
-          crate: grcov
-          use-tool-cache: true
+        run: cargo install grcov
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --all-features
+        run: cargo test --all-features
         env:
           RUSTFLAGS: -Cinstrument-coverage
           LLVM_PROFILE_FILE: interp-rs-%p-%m.profraw
