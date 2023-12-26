@@ -50,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.36.0]
+        rust: [1.43.1]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
