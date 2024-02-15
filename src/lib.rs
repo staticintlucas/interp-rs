@@ -4,11 +4,12 @@
 //!
 //! ```
 //! use interp::interp;
+//! use interp::InterpMode;
 //!
 //! let x = vec![0.0, 0.2, 0.5, 0.8, 1.0];
 //! let y = vec![0.0, 1.0, 3.0, 3.5, 4.0];
 //!
-//! assert_eq!(interp(&x, &y, 0.35), 2.0);
+//! assert_eq!(interp(&x, &y, 0.35, &InterpMode::Extrapolate), 2.0);
 //! ```
 
 #![warn(missing_docs)]
@@ -19,6 +20,18 @@
 use num_traits::Num;
 
 use itertools::{izip, Itertools};
+
+/// Interpolation method that sets the behavior of the `interp*` functions for query points
+/// that fall outside the sample points coordinates
+pub enum InterpMode<T: std::cmp::PartialOrd + Copy> {
+    /// Use slope information to infer value of the query points `xp` when they are outside the limits of the sample points `x`
+    Extrapolate,
+    /// Use the first and last value of the values `y` when the query points `xp` are outside the limits of the sample points `x`
+    /// This behavior is similar to Python Numpy's `interp` function
+    FirstLast,
+    /// Use a provided constant for the values of the query points `xp` that are outside the limits of the sample points `x`
+    Constant(T),
+}
 
 /// Finds the delta between adjacent entries in the slice `p`.
 ///
@@ -115,7 +128,8 @@ where
         .map_or(0, |(i, _)| i)
 }
 
-/// Linearly interpolate the data points given by the `x` and `y` slices at point `xp`.
+/// Linearly interpolate the data points given by the `x` and `y` slices at point `xp`,
+/// using the interpolation method provided by `mode`.
 ///
 /// Returns the equivalent y coordinate to the x coordinate given by `xp`.
 ///
@@ -129,13 +143,14 @@ where
 ///
 /// ```
 /// use interp::interp;
+/// use interp::InterpMode;
 ///
 /// let x = vec![0.0, 1.0, 2.0, 3.0];
 /// let y = vec![1.0, 3.0, 4.0, 2.0];
 ///
-/// assert_eq!(interp(&x, &y, 1.5), 3.5);
+/// assert_eq!(interp(&x, &y, 1.5, &InterpMode::Extrapolate), 3.5);
 /// ```
-pub fn interp<T>(x: &[T], y: &[T], xp: T) -> T
+pub fn interp<T>(x: &[T], y: &[T], xp: T, mode: &InterpMode<T>) -> T
 where
     T: Num + PartialOrd + Copy,
 {
@@ -158,14 +173,19 @@ where
         let c = intercepts(x, y, &m);
 
         // The index of the x coordinate right before xp
+        // i = 0 when none found
         let i = prev_index(x, xp).min(min_len - 2);
 
-        m[i] * xp + c[i]
+        let point = m[i] * xp + c[i];
+        let x_limits = (&x[0], &x[min_len - 1]);
+        let y_limits = (&y[0], &y[min_len - 1]);
+
+        select_outside_point(x_limits, y_limits, &xp, point, mode)
     }
 }
 
 /// Linearly interpolate the data points given by the `x` and `y` slices at each of the points in
-/// the `xp` slice.
+/// the `xp` slice, using the interpolation method provided by `mode`.
 ///
 /// Returns a `Vec<T>` containing the equivalent y coordinates to each of the x coordinates given
 /// by `xp`.
@@ -184,15 +204,20 @@ where
 ///
 /// ```
 /// use interp::interp_slice;
+/// use interp::InterpMode;
 ///
 /// let x = vec![0.0, 1.0, 2.0, 3.0];
 /// let y = vec![1.0, 3.0, 4.0, 2.0];
 ///
 /// let xp = vec![0.5, 2.5, 4.0];
 ///
-/// assert_eq!(interp_slice(&x, &y, &xp), vec![2.0, 3.0, 0.0]);
+/// assert_eq!(interp_slice(&x, &y, &xp, &InterpMode::Extrapolate), vec![2.0, 3.0, 0.0]);
+///
+/// assert_eq!(interp_slice(&x, &y, &xp, &InterpMode::Constant(1e3)), vec![2.0, 3.0, 1e3]);
+///
+/// assert_eq!(interp_slice(&x, &y, &xp, &InterpMode::FirstLast), vec![2.0, 3.0, 2.0]);
 /// ```
-pub fn interp_slice<T>(x: &[T], y: &[T], xp: &[T]) -> Vec<T>
+pub fn interp_slice<T>(x: &[T], y: &[T], xp: &[T], mode: &InterpMode<T>) -> Vec<T>
 where
     T: Num + PartialOrd + Copy,
 {
@@ -214,21 +239,26 @@ where
         // Intercept of the line between adjacent points
         let c = intercepts(x, y, &m);
 
+        let x_limits = (&x[0], &x[min_len - 1]);
+        let y_limits = (&y[0], &y[min_len - 1]);
+
         xp.iter()
             .map(|&xp| {
                 // The index of the x coordinate right before xp. Use min to ensure we don't go out
                 // of m's and c's bounds when xp > x.last()
                 let i = prev_index(x, xp).min(min_len - 2);
 
-                m[i] * xp + c[i]
+                let point = m[i] * xp + c[i];
+
+                select_outside_point(x_limits, y_limits, &xp, point, mode)
             })
             .collect()
     }
 }
 
 /// Linearly interpolate the data points given by the `x` and `y` slices at each of the points in
-/// the `xp` slice. Please note this function requires the `interp_array` feature and Rust 1.55.0 or
-/// later.
+/// the `xp` slice, using the interpolation method provided by `mode`. Please note this function
+/// requires the `interp_array` feature and Rust 1.55.0 or later.
 ///
 /// Returns a `[T; N]` containing the equivalent y coordinates to each of the x coordinates given
 /// by `xp`.
@@ -247,16 +277,22 @@ where
 ///
 /// ```
 /// use interp::interp_array;
+/// use interp::InterpMode;
 ///
 /// let x = [0.0, 1.0, 2.0, 3.0];
 /// let y = [1.0, 3.0, 4.0, 2.0];
 ///
 /// let xp = [0.5, 2.5, 4.0];
 ///
-/// assert_eq!(interp_array(&x, &y, &xp), [2.0, 3.0, 0.0]);
+/// assert_eq!(interp_array(&x, &y, &xp, &InterpMode::Extrapolate), [2.0, 3.0, 0.0]);
 /// ```
 #[cfg(feature = "interp_array")]
-pub fn interp_array<T, const N: usize>(x: &[T], y: &[T], xp: &[T; N]) -> [T; N]
+pub fn interp_array<T, const N: usize>(
+    x: &[T],
+    y: &[T],
+    xp: &[T; N],
+    mode: &InterpMode<T>,
+) -> [T; N]
 where
     T: Num + PartialOrd + Copy,
 {
@@ -278,19 +314,60 @@ where
         // Intercept of the line between adjacent points
         let c = intercepts(x, y, &m);
 
+        let x_limits = (&x[0], &x[min_len - 1]);
+        let y_limits = (&y[0], &y[min_len - 1]);
+
         xp.map(|xp| {
             // The index of the x coordinate right before xp. Use min to ensure we don't go out
             // of m's and c's bounds when xp > x.last()
             let i = prev_index(x, xp).min(min_len - 2);
 
-            m[i] * xp + c[i]
+            let point = m[i] * xp + c[i];
+
+            select_outside_point(x_limits, y_limits, &xp, point, mode)
         })
+    }
+}
+
+fn select_outside_point<T>(
+    x_limits: (&T, &T),
+    y_limits: (&T, &T),
+    xp: &T,
+    default: T,
+    mode: &InterpMode<T>,
+) -> T
+where
+    T: Num + PartialOrd + Copy,
+{
+    if xp < x_limits.0 {
+        match mode {
+            InterpMode::Extrapolate => default,
+            InterpMode::FirstLast => *y_limits.0,
+            InterpMode::Constant(val) => *val,
+        }
+    } else if xp > x_limits.1 {
+        match mode {
+            InterpMode::Extrapolate => default,
+            InterpMode::FirstLast => *y_limits.1,
+            InterpMode::Constant(val) => *val,
+        }
+    } else {
+        default
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use num_traits::float::FloatCore;
+
     use super::*;
+
+    fn vec_compare<T>(v1: &[T], v2: &[T]) -> bool
+    where
+        T: Num + PartialOrd + Copy + FloatCore,
+    {
+        (v1.len() == v2.len()) && izip!(v1, v2).all(|(a, b)| (a.is_nan() && b.is_nan()) || (a == b))
+    }
 
     #[test]
     fn test_deltas() {
@@ -350,50 +427,105 @@ mod tests {
 
     #[test]
     fn test_interp() {
-        assert_eq!(interp(&[], &[], 2.0), 0.0);
+        assert_eq!(interp(&[], &[], 2.0, &InterpMode::Extrapolate), 0.0);
 
-        assert_eq!(interp(&[1.0], &[2.0], 2.0), 2.0);
+        assert_eq!(interp(&[1.0], &[2.0], 2.0, &InterpMode::Extrapolate), 2.0);
 
         let x = vec![0.0, 1.0, 2.0, 3.0, 4.5];
         let y = vec![0.0, 2.0, 5.0, 3.0, 2.0];
 
-        assert_eq!(interp(&x, &y, 2.5), 4.0);
-        assert_eq!(interp(&x, &y, -1.0), -2.0);
-        assert_eq!(interp(&x, &y, 7.5), 0.0);
+        assert_eq!(interp(&x, &y, 2.5, &InterpMode::Extrapolate), 4.0);
+        assert_eq!(interp(&x, &y, -1.0, &InterpMode::Extrapolate), -2.0);
+        assert_eq!(interp(&x, &y, 7.5, &InterpMode::Extrapolate), 0.0);
     }
 
     #[test]
     fn test_interp_slice() {
-        assert_eq!(interp_slice(&[], &[], &[2.0]), vec![0.0]);
+        assert_eq!(
+            interp_slice(&[], &[], &[2.0], &InterpMode::Extrapolate),
+            vec![0.0]
+        );
 
-        assert_eq!(interp_slice(&[1.0], &[2.0], &[2.0]), vec![2.0]);
+        assert_eq!(
+            interp_slice(&[1.0], &[2.0], &[2.0], &InterpMode::Extrapolate),
+            vec![2.0]
+        );
 
         let x = vec![0.0, 1.0, 2.0, 3.0, 4.5];
         let y = vec![0.0, 2.0, 5.0, 3.0, 2.0];
 
-        assert_eq!(interp_slice(&x, &y, &[]), vec![]);
+        assert_eq!(interp_slice(&x, &y, &[], &InterpMode::Extrapolate), vec![]);
 
         let xp = vec![2.5, -1.0, 7.5];
         let result = vec![4.0, -2.0, 0.0];
 
-        assert_eq!(interp_slice(&x, &y, &xp), result);
+        assert_eq!(interp_slice(&x, &y, &xp, &InterpMode::Extrapolate), result);
+    }
+
+    #[test]
+    fn test_interp_slice_constant_outside_bounds() {
+        use std::f64::NAN;
+
+        let x = vec![0.0, 1.0, 2.0, 3.0];
+        let y = vec![1.0, 3.0, 4.0, 2.0];
+
+        assert_eq!(
+            interp_slice(&x, &y, &[], &InterpMode::Constant(NAN)),
+            vec![]
+        );
+
+        let xp = vec![0.5, 2.5, 4.0];
+
+        let expected = vec![2.0, 3.0, 1e3];
+        assert_eq!(
+            interp_slice(&x, &y, &xp, &InterpMode::Constant(1e3)),
+            expected
+        );
+
+        let x = vec![0.0, 1.0, 2.0, 3.0, 4.5];
+        let y = vec![0.0, 2.0, 5.0, 3.0, 2.0];
+
+        let xp = vec![2.5, -1.0, 7.5];
+        let result = interp_slice(&x, &y, &xp, &InterpMode::Constant(NAN));
+        let expected = vec![4.0, NAN, NAN];
+
+        assert!(vec_compare(&result, &expected));
+    }
+
+    #[test]
+    fn test_interp_slice_first_last() {
+        let x = vec![0.0, 1.0, 2.0, 3.0, 4.5];
+        let y = vec![0.0, 2.0, 5.0, 3.0, 2.0];
+
+        assert_eq!(interp_slice(&x, &y, &[], &InterpMode::FirstLast), vec![]);
+
+        let xp = vec![2.5, -1.0, 7.5];
+        let result = vec![4.0, 0.0, 2.0];
+
+        assert_eq!(interp_slice(&x, &y, &xp, &InterpMode::FirstLast), result);
     }
 
     #[test]
     #[cfg(feature = "interp_array")]
     fn test_interp_array() {
-        assert_eq!(interp_array(&[], &[], &[2.0]), [0.0]);
+        assert_eq!(
+            interp_array(&[], &[], &[2.0], &InterpMode::Extrapolate),
+            [0.0]
+        );
 
-        assert_eq!(interp_array(&[1.0], &[2.0], &[2.0]), [2.0]);
+        assert_eq!(
+            interp_array(&[1.0], &[2.0], &[2.0], &InterpMode::Extrapolate),
+            [2.0]
+        );
 
         let x = vec![0.0, 1.0, 2.0, 3.0, 4.5];
         let y = vec![0.0, 2.0, 5.0, 3.0, 2.0];
 
-        assert_eq!(interp_array(&x, &y, &[]), []);
+        assert_eq!(interp_array(&x, &y, &[], &InterpMode::Extrapolate), []);
 
         let xp = [2.5, -1.0, 7.5];
         let result = [4.0, -2.0, 0.0];
 
-        assert_eq!(interp_array(&x, &y, &xp), result);
+        assert_eq!(interp_array(&x, &y, &xp, &InterpMode::Extrapolate), result);
     }
 }
