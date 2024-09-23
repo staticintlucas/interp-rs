@@ -59,7 +59,7 @@ jobs:
       - name: Setup cargo binstall
         uses: cargo-bins/cargo-binstall@main
       - name: Setup grcov
-        run: cargo binstall grcov
+        run: cargo binstall -y grcov
       - name: Run cargo test
         run: cargo test --all-features
         env:
