@@ -35,10 +35,12 @@ use itertools::{izip, Itertools};
 
 /// Interpolation method that sets the behaviour of the interpolation functions for points outside
 /// the range of sample points.
+#[derive(Debug, Clone, Copy, Default)]
 pub enum InterpMode<T: std::cmp::PartialOrd + Copy> {
     /// Use slope information to linearly extrapolate the value.
     ///
     /// This was the default behaviour in earlier versions of this crate.
+    #[default]
     Extrapolate,
     /// Use `y.first()` for `xp <= x.first()`, or `y.last()` for `xp >= x.last()`. This is similar
     /// to the default behaviour or NumPy's [`numpy.interp`] function.
@@ -52,13 +54,6 @@ pub enum InterpMode<T: std::cmp::PartialOrd + Copy> {
     ///
     /// [`interp1`]: https://www.mathworks.com/help/matlab/ref/double.interp1.html
     Constant(T),
-}
-
-#[allow(clippy::derivable_impls)] // We need a manual impl for our MSRV
-impl<T: std::cmp::PartialOrd + Copy> Default for InterpMode<T> {
-    fn default() -> Self {
-        InterpMode::Extrapolate
-    }
 }
 
 /// Finds the delta between adjacent entries in the slice `p`.
