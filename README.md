@@ -3,10 +3,11 @@
 [![Test status](https://img.shields.io/github/actions/workflow/status/staticintlucas/interp-rs/test.yml?branch=main&label=tests&style=flat-square)][tests]
 [![Code coverage](https://img.shields.io/codecov/c/gh/staticintlucas/interp-rs?style=flat-square)][coverage]
 [![Crate version](https://img.shields.io/crates/v/interp?style=flat-square)][version]
-[![Rust version](https://img.shields.io/badge/rust-1.43%2B-informational?style=flat-square)][rust version]
+[![Rust version](https://img.shields.io/badge/rust-1.60%2B-informational?style=flat-square)][rust version]
 [![Downloads](https://img.shields.io/crates/d/interp?style=flat-square)][downloads]
 
-A Rust reimplementation of Matlab's `interp1` function for linear interpolation.
+An implementation of 1-dimensional linear interpolation in Rust, similar to MATLAB's `interp1` or
+NumPy's `numpy.interp`.
 
 API documentation is available on [docs.rs][docs].
 
@@ -23,34 +24,27 @@ Add `interp` to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-interp = "1.0"
-```
-
-Or, if you need the `interp_array` feature (only supported on Rust 1.55.0 or later)
-
-```toml
-[dependencies]
-interp = { version = "1.0", features = ["interp_array"] }
+interp = "2.0"
 ```
 
 ## Example
 
 ```rust
-use interp::interp;
+use interp::{interp, interp_array, interp_slice, InterpMode};
 
 let x = vec![0.0, 0.2, 0.5, 0.8, 1.0];
 let y = vec![0.0, 1.0, 3.0, 3.5, 4.0];
 
 // Interpolate at a single point
-assert_eq!(interp(&x, &y, 0.35), 2.0);
+assert_eq!(interp(&x, &y, 0.35, &InterpMode::default()), 2.0);
 
-// Interpolate a vec
+// Interpolate a slice - alloces a new results Vec<T>
 let xp = vec![0.1, 0.65, 0.9];
-assert_eq!(interp_slice(&x, &y, &xp), vec![0.5, 3.25, 3.75]);
+assert_eq!(interp_slice(&x, &y, &xp, &InterpMode::default()), vec![0.5, 3.25, 3.75]);
 
-// Interpolate an array (requires the interp_array feature and Rust 1.55.0+)
+// Interpolate an array
 let xp = [0.1, 0.65, 0.9];
-assert_eq!(interp_array(&x, &y, &xp), [0.5, 3.25, 3.75]);
+assert_eq!(interp_array(&x, &y, &xp, &InterpMode::default()), [0.5, 3.25, 3.75]);
 ```
 
 Full API documentation is available on [docs.rs][docs].

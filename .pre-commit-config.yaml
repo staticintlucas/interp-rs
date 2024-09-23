@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v4.6.0
   hooks:
   - id: check-added-large-files
   - id: check-toml
@@ -9,16 +9,22 @@ repos:
   - id: mixed-line-ending
     args: [--fix=lf]
   - id: trailing-whitespace
-- repo: https://github.com/doublify/pre-commit-rust
-  rev: v1.0
-  hooks:
-  - id: fmt
-    args: [--all, --, --check]
-  - id: cargo-check
-  - id: clippy
-    args: [--, -D, warnings]
 - repo: local
   hooks:
+  - id: cargo-clippy
+    name: cargo clippy
+    entry: cargo clippy
+    language: system
+    types: [rust]
+    pass_filenames: false
+    args: [--all-targets, --all-features, --, --D, warnings]
+  - id: cargo-fmt
+    name: cargo fmt
+    entry: cargo fmt
+    language: system
+    types: [rust]
+    pass_filenames: false
+    args: [--all, --, --check]
   - id: cargo-test
     name: cargo test
     entry: cargo test

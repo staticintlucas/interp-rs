@@ -1,15 +1,27 @@
-//! A Rust implementation of Matlab's `interp1` function for linear interpolation.
+//! An implementation of 1-dimensional linear interpolation in Rust, similar to MATLAB's `interp1`
+//! or NumPy's `numpy.interp`.
+//!
+//! [`numpy.interp`]: https://numpy.org/doc/stable/reference/generated/numpy.interp.html
+//! [`interp1`]: https://www.mathworks.com/help/matlab/ref/double.interp1.html
 //!
 //! # Example
 //!
 //! ```
-//! use interp::interp;
-//! use interp::InterpMode;
+//! use interp::{interp, interp_array, interp_slice, InterpMode};
 //!
 //! let x = vec![0.0, 0.2, 0.5, 0.8, 1.0];
 //! let y = vec![0.0, 1.0, 3.0, 3.5, 4.0];
 //!
-//! assert_eq!(interp(&x, &y, 0.35, &InterpMode::Extrapolate), 2.0);
+//! // Interpolate at a single point
+//! assert_eq!(interp(&x, &y, 0.35, &InterpMode::default()), 2.0);
+//!
+//! // Interpolate a slice - alloces a new results Vec<T>
+//! let xp = vec![0.1, 0.65, 0.9];
+//! assert_eq!(interp_slice(&x, &y, &xp, &InterpMode::default()), vec![0.5, 3.25, 3.75]);
+//!
+//! // Interpolate an array
+//! let xp = [0.1, 0.65, 0.9];
+//! assert_eq!(interp_array(&x, &y, &xp, &InterpMode::default()), [0.5, 3.25, 3.75]);
 //! ```
 
 #![warn(missing_docs)]
@@ -21,16 +33,32 @@ use num_traits::Num;
 
 use itertools::{izip, Itertools};
 
-/// Interpolation method that sets the behavior of the `interp*` functions for query points
-/// that fall outside the sample points coordinates
+/// Interpolation method that sets the behaviour of the interpolation functions for points outside
+/// the range of sample points.
 pub enum InterpMode<T: std::cmp::PartialOrd + Copy> {
-    /// Use slope information to infer value of the query points `xp` when they are outside the limits of the sample points `x`
+    /// Use slope information to linearly extrapolate the value.
+    ///
+    /// This was the default behaviour in earlier versions of this crate.
     Extrapolate,
-    /// Use the first and last value of the values `y` when the query points `xp` are outside the limits of the sample points `x`
-    /// This behavior is similar to Python Numpy's `interp` function
+    /// Use `y.first()` for `xp <= x.first()`, or `y.last()` for `xp >= x.last()`. This is similar
+    /// to the default behaviour or NumPy's [`numpy.interp`] function.
+    ///
+    /// [`numpy.interp`]: https://numpy.org/doc/stable/reference/generated/numpy.interp.html
     FirstLast,
-    /// Use a provided constant for the values of the query points `xp` that are outside the limits of the sample points `x`
+    /// Use the given constant for values outside the range.
+    ///
+    /// This is commonly used to return `T::NAN` (assuming `T: Float`) to mirror the MATLAB
+    /// [`interp1`] function's behaviour using the `'linear'` method.
+    ///
+    /// [`interp1`]: https://www.mathworks.com/help/matlab/ref/double.interp1.html
     Constant(T),
+}
+
+#[allow(clippy::derivable_impls)] // We need a manual impl for our MSRV
+impl<T: std::cmp::PartialOrd + Copy> Default for InterpMode<T> {
+    fn default() -> Self {
+        InterpMode::Extrapolate
+    }
 }
 
 /// Finds the delta between adjacent entries in the slice `p`.
@@ -257,8 +285,7 @@ where
 }
 
 /// Linearly interpolate the data points given by the `x` and `y` slices at each of the points in
-/// the `xp` slice, using the interpolation method provided by `mode`. Please note this function
-/// requires the `interp_array` feature and Rust 1.55.0 or later.
+/// the `xp` slice, using the interpolation method provided by `mode`.
 ///
 /// Returns a `[T; N]` containing the equivalent y coordinates to each of the x coordinates given
 /// by `xp`.
@@ -286,7 +313,6 @@ where
 ///
 /// assert_eq!(interp_array(&x, &y, &xp, &InterpMode::Extrapolate), [2.0, 3.0, 0.0]);
 /// ```
-#[cfg(feature = "interp_array")]
 pub fn interp_array<T, const N: usize>(
     x: &[T],
     y: &[T],
@@ -358,6 +384,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use isclose::assert_is_close;
     use num_traits::float::FloatCore;
 
     use super::*;
@@ -379,7 +406,7 @@ mod tests {
         assert_eq!(result.len(), delta.len());
 
         for (r, d) in izip!(result, delta) {
-            assert_eq!(r, d);
+            assert_is_close!(r, d);
         }
     }
 
@@ -394,7 +421,7 @@ mod tests {
         assert_eq!(result.len(), slope.len());
 
         for (r, m) in izip!(result, slope) {
-            assert_eq!(r, m);
+            assert_is_close!(r, m);
         }
     }
 
@@ -410,7 +437,7 @@ mod tests {
         assert_eq!(result.len(), intercept.len());
 
         for (r, c) in izip!(result, intercept) {
-            assert_eq!(r, c);
+            assert_is_close!(r, c);
         }
     }
 
@@ -427,16 +454,16 @@ mod tests {
 
     #[test]
     fn test_interp() {
-        assert_eq!(interp(&[], &[], 2.0, &InterpMode::Extrapolate), 0.0);
+        assert_is_close!(interp(&[], &[], 2.0, &InterpMode::Extrapolate), 0.0);
 
-        assert_eq!(interp(&[1.0], &[2.0], 2.0, &InterpMode::Extrapolate), 2.0);
+        assert_is_close!(interp(&[1.0], &[2.0], 2.0, &InterpMode::Extrapolate), 2.0);
 
         let x = vec![0.0, 1.0, 2.0, 3.0, 4.5];
         let y = vec![0.0, 2.0, 5.0, 3.0, 2.0];
 
-        assert_eq!(interp(&x, &y, 2.5, &InterpMode::Extrapolate), 4.0);
-        assert_eq!(interp(&x, &y, -1.0, &InterpMode::Extrapolate), -2.0);
-        assert_eq!(interp(&x, &y, 7.5, &InterpMode::Extrapolate), 0.0);
+        assert_is_close!(interp(&x, &y, 2.5, &InterpMode::Extrapolate), 4.0);
+        assert_is_close!(interp(&x, &y, -1.0, &InterpMode::Extrapolate), -2.0);
+        assert_is_close!(interp(&x, &y, 7.5, &InterpMode::Extrapolate), 0.0);
     }
 
     #[test]
@@ -464,13 +491,11 @@ mod tests {
 
     #[test]
     fn test_interp_slice_constant_outside_bounds() {
-        use std::f64::NAN;
-
         let x = vec![0.0, 1.0, 2.0, 3.0];
         let y = vec![1.0, 3.0, 4.0, 2.0];
 
         assert_eq!(
-            interp_slice(&x, &y, &[], &InterpMode::Constant(NAN)),
+            interp_slice(&x, &y, &[], &InterpMode::Constant(f64::NAN)),
             vec![]
         );
 
@@ -486,8 +511,8 @@ mod tests {
         let y = vec![0.0, 2.0, 5.0, 3.0, 2.0];
 
         let xp = vec![2.5, -1.0, 7.5];
-        let result = interp_slice(&x, &y, &xp, &InterpMode::Constant(NAN));
-        let expected = vec![4.0, NAN, NAN];
+        let result = interp_slice(&x, &y, &xp, &InterpMode::Constant(f64::NAN));
+        let expected = vec![4.0, f64::NAN, f64::NAN];
 
         assert!(vec_compare(&result, &expected));
     }
@@ -506,26 +531,29 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "interp_array")]
     fn test_interp_array() {
-        assert_eq!(
-            interp_array(&[], &[], &[2.0], &InterpMode::Extrapolate),
-            [0.0]
-        );
+        let result = interp_array(&[], &[], &[2.0], &InterpMode::Extrapolate);
+        for (act, exp) in izip!(result, [0.0]) {
+            assert_is_close!(act, exp);
+        }
 
-        assert_eq!(
-            interp_array(&[1.0], &[2.0], &[2.0], &InterpMode::Extrapolate),
-            [2.0]
-        );
+        let result = interp_array(&[1.0], &[2.0], &[2.0], &InterpMode::Extrapolate);
+        for (act, exp) in izip!(result, [2.0]) {
+            assert_is_close!(act, exp);
+        }
 
         let x = vec![0.0, 1.0, 2.0, 3.0, 4.5];
         let y = vec![0.0, 2.0, 5.0, 3.0, 2.0];
-
-        assert_eq!(interp_array(&x, &y, &[], &InterpMode::Extrapolate), []);
+        let result = interp_array(&x, &y, &[], &InterpMode::Extrapolate);
+        for (act, exp) in izip!(result, [] as [f64; 0]) {
+            assert_is_close!(act, exp);
+        }
 
         let xp = [2.5, -1.0, 7.5];
-        let result = [4.0, -2.0, 0.0];
-
-        assert_eq!(interp_array(&x, &y, &xp, &InterpMode::Extrapolate), result);
+        let expected = [4.0, -2.0, 0.0];
+        let result = interp_array(&x, &y, &xp, &InterpMode::Extrapolate);
+        for (act, exp) in izip!(result, expected) {
+            assert_is_close!(act, exp);
+        }
     }
 }

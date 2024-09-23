@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [stable, 1.55.0]
+        rust: [stable, 1.60.0]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -43,31 +43,6 @@ jobs:
         run: cargo test --all-features
         env:
           RUSTFLAGS: -D warnings
-
-  test-msrv: # separate test since MSRV doesn't support interp_array
-    name: Build & Test
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [1.43.1]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup toolchain
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-      - name: Run cargo build
-        run: cargo build
-        env:
-          RUSTFLAGS: -D warnings
-          CARGO_NET_GIT_FETCH_WITH_CLI: true # rust-lang/cargo#10303
-      - name: Run cargo test
-        run: cargo test
-        env:
-          RUSTFLAGS: -D warnings
-          CARGO_NET_GIT_FETCH_WITH_CLI: true # rust-lang/cargo#10303
 
   coverage:
     name: Test coverage

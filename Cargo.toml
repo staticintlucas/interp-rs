@@ -1,6 +1,6 @@
 [package]
 name = "interp"
-version = "1.0.3"
+version = "2.0.0"
 authors = ["Lucas Jansen <7199136+staticintlucas@users.noreply.github.com>"]
 description = "A Rust implementation of Matlab's interp1 function"
 readme = "README.md"
@@ -9,10 +9,11 @@ repository = "https://github.com/staticintlucas/interp-rs"
 keywords = ["interp", "interp1", "linear", "interpolation", "numeric"]
 categories = ["algorithms", "mathematics", "rust-patterns"]
 edition = "2018"
+rust-version = "1.60"
 
 [dependencies]
-itertools = { version = "0.12", default-features = false }
-num-traits = { version = "0.2,<0.2.19", default-features = false }
+itertools = { version = "0.13", default-features = false }
+num-traits = { version = "0.2", default-features = false }
 
-[features]
-interp_array = []
+[dev-dependencies]
+isclose = "0.1"
