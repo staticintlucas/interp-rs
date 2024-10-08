@@ -16,7 +16,7 @@ API documentation is available on [docs.rs][docs].
 [version]: https://crates.io/crates/interp
 [rust version]: https://crates.io/crates/interp
 [downloads]: https://crates.io/crates/interp
-[docs]: https://docs.rs/stringslice/latest/stringslice/
+[docs]: https://docs.rs/interp/latest/interp/
 
 ## Usage
 
@@ -49,7 +49,7 @@ assert_eq!(interp_array(&x, &y, &xp, &InterpMode::default()), [0.5, 3.25, 3.75])
 
 Full API documentation is available on [docs.rs][docs].
 
-[docs]: https://docs.rs/stringslice/latest/stringslice/
+[docs]: https://docs.rs/interp/latest/interp/
 
 ## Contributing
 
