@@ -78,5 +78,7 @@ jobs:
           --ignore '/*'
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v4
-        with:
+        env:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: lcov.info
+          fail_ci_if_error: true
