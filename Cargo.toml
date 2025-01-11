@@ -12,7 +12,7 @@ edition = "2018"
 rust-version = "1.62"
 
 [dependencies]
-itertools = { version = "0.13", default-features = false }
+itertools = { version = "0.14", default-features = false }
 num-traits = { version = "0.2", default-features = false }
 
 [dev-dependencies]
