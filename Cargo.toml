@@ -9,10 +9,10 @@ repository = "https://github.com/staticintlucas/interp-rs"
 keywords = ["interp", "interp1", "linear", "interpolation", "numeric"]
 categories = ["algorithms", "mathematics", "rust-patterns"]
 edition = "2018"
-rust-version = "1.62"
+rust-version = "1.63"
 
 [dependencies]
-itertools = { version = "0.13", default-features = false }
+itertools = { version = "0.14", default-features = false }
 num-traits = { version = "0.2", default-features = false }
 
 [dev-dependencies]
