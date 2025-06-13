@@ -23,6 +23,11 @@
 //! let xp = [0.1, 0.65, 0.9];
 //! assert_eq!(interp_array(&x, &y, &xp, &InterpMode::default()), [0.5, 3.25, 3.75]);
 //! ```
+//!
+//! <div class="warning">
+//! **Warning:** `x` is expected to be strictly increasing, but this is not explicitly enforced.
+//! However, if `x` is non-increasing, interpolation results are meaningless.
+//! </div>
 
 #![warn(missing_docs)]
 #![allow(unknown_lints)]
@@ -144,11 +149,7 @@ fn prev_index<T>(x: &[T], xp: T) -> usize
 where
     T: Num + PartialOrd + Copy,
 {
-    x.iter()
-        .take_while(|&&x| x < xp)
-        .enumerate()
-        .last()
-        .map_or(0, |(i, _)| i)
+    x.partition_point(|&probe| probe < xp).saturating_sub(1)
 }
 
 /// Linearly interpolate the data points given by the `x` and `y` slices at point `xp`,
@@ -173,6 +174,11 @@ where
 ///
 /// assert_eq!(interp(&x, &y, 1.5, &InterpMode::Extrapolate), 3.5);
 /// ```
+///
+/// <div class="warning">
+/// **Warning:** `x` is expected to be strictly increasing, but this is not explicitly enforced.
+/// However, if `x` is non-increasing, interpolation results are meaningless.
+/// </div>
 pub fn interp<T>(x: &[T], y: &[T], xp: T, mode: &InterpMode<T>) -> T
 where
     T: Num + PartialOrd + Copy,
@@ -240,6 +246,11 @@ where
 ///
 /// assert_eq!(interp_slice(&x, &y, &xp, &InterpMode::FirstLast), vec![2.0, 3.0, 2.0]);
 /// ```
+///
+/// <div class="warning">
+/// **Warning:** `x` is expected to be strictly increasing, but this is not explicitly enforced.
+/// However, if `x` is non-increasing, interpolation results are meaningless.
+/// </div>
 pub fn interp_slice<T>(x: &[T], y: &[T], xp: &[T], mode: &InterpMode<T>) -> Vec<T>
 where
     T: Num + PartialOrd + Copy,
@@ -308,6 +319,11 @@ where
 ///
 /// assert_eq!(interp_array(&x, &y, &xp, &InterpMode::Extrapolate), [2.0, 3.0, 0.0]);
 /// ```
+///
+/// <div class="warning">
+/// **Warning:** `x` is expected to be strictly increasing, but this is not explicitly enforced.
+/// However, if `x` is non-increasing, interpolation results are meaningless.
+/// </div>
 pub fn interp_array<T, const N: usize>(
     x: &[T],
     y: &[T],
@@ -422,10 +438,10 @@ mod tests {
 
     #[test]
     fn test_intercepts() {
-        let x = vec![0.0, 1.0, 3.5, 2.5, 6.0];
+        let x = vec![0.0, 1.0, 2.5, 3.5, 6.0];
         let y = vec![0.0, 1.0, 6.0, 5.0, 8.5];
         let slope = vec![1.0, 2.0, -0.5, 3.5, 1.0];
-        let intercept = vec![0.0, -1.0, 7.75, -3.75, 2.5];
+        let intercept = vec![0.0, -1.0, 7.25, -7.25, 2.5];
 
         let result = intercepts(&x, &y, &slope);
 
@@ -438,13 +454,19 @@ mod tests {
 
     #[test]
     fn test_prev_index() {
-        let x = vec![0.0, 1.0, 3.5, 2.5, 6.0];
+        let x = vec![0.0, 1.0, 2.5, 3.5, 6.0];
+
+        let result = prev_index(&x, -1.0);
+        assert_eq!(result, 0);
 
         let result = prev_index(&x, 3.0);
-        assert_eq!(result, 1);
+        assert_eq!(result, 2);
 
         let result = prev_index(&x, 4.0);
         assert_eq!(result, 3);
+
+        let result = prev_index(&x, 7.0);
+        assert_eq!(result, 4);
     }
 
     #[test]
