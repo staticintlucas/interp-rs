@@ -24,7 +24,7 @@ Add `interp` to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-interp = "2.0"
+interp = "2.1"
 ```
 
 ## Example
@@ -47,7 +47,7 @@ let xp = [0.1, 0.65, 0.9];
 assert_eq!(interp_array(&x, &y, &xp, &InterpMode::default()), [0.5, 3.25, 3.75]);
 ```
 
-> [!WARNING]  
+> [!WARNING]
 > `x` is expected to be strictly increasing, but this is not explicitly enforced. However, if the sequence `x` is not strictly increasing, interpolation results are meaningless.
 
 Full API documentation is available on [docs.rs][docs].
