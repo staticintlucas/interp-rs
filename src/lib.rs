@@ -25,8 +25,10 @@
 //! ```
 //!
 //! <div class="warning">
+//!
 //! **Warning:** `x` is expected to be strictly increasing, but this is not explicitly enforced.
 //! However, if `x` is non-increasing, interpolation results are meaningless.
+//!
 //! </div>
 
 #![warn(missing_docs)]
@@ -176,8 +178,10 @@ where
 /// ```
 ///
 /// <div class="warning">
+///
 /// **Warning:** `x` is expected to be strictly increasing, but this is not explicitly enforced.
 /// However, if `x` is non-increasing, interpolation results are meaningless.
+///
 /// </div>
 pub fn interp<T>(x: &[T], y: &[T], xp: T, mode: &InterpMode<T>) -> T
 where
@@ -248,8 +252,10 @@ where
 /// ```
 ///
 /// <div class="warning">
+///
 /// **Warning:** `x` is expected to be strictly increasing, but this is not explicitly enforced.
 /// However, if `x` is non-increasing, interpolation results are meaningless.
+///
 /// </div>
 pub fn interp_slice<T>(x: &[T], y: &[T], xp: &[T], mode: &InterpMode<T>) -> Vec<T>
 where
@@ -321,8 +327,10 @@ where
 /// ```
 ///
 /// <div class="warning">
+///
 /// **Warning:** `x` is expected to be strictly increasing, but this is not explicitly enforced.
 /// However, if `x` is non-increasing, interpolation results are meaningless.
+///
 /// </div>
 pub fn interp_array<T, const N: usize>(
     x: &[T],
