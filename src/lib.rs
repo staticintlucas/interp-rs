@@ -384,12 +384,16 @@ fn select_outside_point<T>(
 where
     T: Num + PartialOrd + Copy,
 {
-    if xp < x_limits.0 {
+    if xp == x_limits.0 {
+        *y_limits.0
+    } else if xp < x_limits.0 {
         match mode {
             InterpMode::Extrapolate => default,
             InterpMode::FirstLast => *y_limits.0,
             InterpMode::Constant(val) => *val,
         }
+    } else if xp == x_limits.1 {
+        *y_limits.1
     } else if xp > x_limits.1 {
         match mode {
             InterpMode::Extrapolate => default,
@@ -540,6 +544,30 @@ mod tests {
         let expected = vec![4.0, f64::NAN, f64::NAN];
 
         assert!(vec_compare(&result, &expected));
+    }
+
+    #[test]
+    fn test_interp_on_endpoints() {
+        let x = [67.0, 97.0];
+        let y = [18.75, 28.75];
+
+        let y_left = interp(&x, &y, x[0], &InterpMode::Extrapolate);
+        let y_right = interp(&x, &y, x[1], &InterpMode::Extrapolate);
+
+        assert_eq!(y_left, y[0]);
+        assert_eq!(y_right, y[1]);
+
+        let y_left = interp(&x, &y, x[0], &InterpMode::FirstLast);
+        let y_right = interp(&x, &y, x[1], &InterpMode::FirstLast);
+
+        assert_eq!(y_left, y[0]);
+        assert_eq!(y_right, y[1]);
+
+        let y_left = interp(&x, &y, x[0], &InterpMode::Constant(f64::NAN));
+        let y_right = interp(&x, &y, x[1], &InterpMode::Constant(f64::NAN));
+
+        assert_eq!(y_left, y[0]);
+        assert_eq!(y_right, y[1]);
     }
 
     #[test]
