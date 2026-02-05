@@ -547,6 +547,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::float_cmp)]
     fn test_interp_on_endpoints() {
         let x = [67.0, 97.0];
         let y = [18.75, 28.75];
